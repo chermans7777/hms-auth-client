@@ -7,6 +7,22 @@ import { NextResponse } from 'next/server';
 import { verifyAccessToken, verifySessionCookie, signSession, type Session } from './core';
 import { AUTH_HUB_URL, APP_ID, APP_URL, COOKIE } from './config';
 
+/**
+ * Resolve an untrusted return target to a SAFE same-origin URL under APP_URL. Rejects absolute URLs,
+ * protocol-relative (`//evil.com`) and backslash (`/\evil.com`) tricks that `startsWith('/')` alone
+ * lets through, so neither the SSO `state` nor the logout `redirect` can bounce a user off-site.
+ */
+function safeReturn(raw: string | null | undefined): URL {
+  const base = new URL(APP_URL);
+  if (raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\')) {
+    try {
+      const candidate = new URL(raw, APP_URL);
+      if (candidate.origin === base.origin) return candidate;
+    } catch { /* fall through */ }
+  }
+  return new URL('/', APP_URL);
+}
+
 /** The signed-in user for this request, or null. Use in server components / route handlers. */
 export async function getSession(): Promise<Session | null> {
   const token = (await cookies()).get(COOKIE)?.value;
@@ -42,7 +58,7 @@ export async function callbackHandler(req: Request) {
   const identity = await verifyAccessToken(token);
   const appSession = await signSession(identity);
 
-  const dest = state.startsWith('/') ? new URL(state, APP_URL) : new URL('/', APP_URL);
+  const dest = safeReturn(state);
   const response = NextResponse.redirect(dest);
   response.cookies.set(COOKIE, appSession, {
     httpOnly: true,
@@ -57,9 +73,9 @@ export async function callbackHandler(req: Request) {
 /** GET /api/auth/logout — clears the app session (and bounces through the hub to end SSO). */
 export async function logoutHandler(req: Request) {
   const url = new URL(req.url);
-  const backToApp = url.searchParams.get('redirect') || '/';
+  const backToApp = safeReturn(url.searchParams.get('redirect')); // same-origin only; no off-site bounce
   const hubLogout = new URL('/api/logout', AUTH_HUB_URL);
-  hubLogout.searchParams.set('redirect', new URL(backToApp, APP_URL).toString());
+  hubLogout.searchParams.set('redirect', backToApp.toString());
   const response = NextResponse.redirect(hubLogout);
   response.cookies.delete(COOKIE);
   return response;

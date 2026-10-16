@@ -1,16 +1,27 @@
 {
   "name": "@hms/auth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Standard auth client for HMS apps — SSO through the HMS Auth Hub (verifies RS256 tokens via JWKS, manages each app's own session).",
   "license": "UNLICENSED",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./middleware": { "types": "./dist/next-middleware.d.ts", "default": "./dist/next-middleware.js" },
-    "./server": { "types": "./dist/next-server.d.ts", "default": "./dist/next-server.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/next-middleware.d.ts",
+      "default": "./dist/next-middleware.js"
+    },
+    "./server": {
+      "types": "./dist/next-server.d.ts",
+      "default": "./dist/next-server.js"
+    }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
